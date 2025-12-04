@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026日本10天9夜行程地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+        .sidebar {
+            width: 360px;
+            background: #16213e;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #2a2a5a;
+        }
+        h1 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        .subtitle {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .days-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .day-section {
+            margin-bottom: 12px;
+            background: #1a1a2e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .day-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .day-header:hover {
+            background: #252550;
+        }
+        .day-badge {
+            background: #4ecdc4;
+            color: #1a1a2e;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+        }
+        .day-info {
+            flex: 1;
+        }
+        .day-date {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .day-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .day-toggle {
+            color: #4ecdc4;
+            font-size: 1.2rem;
+            transition: transform 0.3s;
+        }
+        .day-section.expanded .day-toggle {
+            transform: rotate(180deg);
+        }
+        .spots-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .day-section.expanded .spots-list {
+            max-height: 1500px;
+        }
+        .spot-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .spot-item:hover {
+            background: #252550;
+            border-left-color: #4ecdc4;
+        }
+        .spot-item.active {
+            background: #2a2a5a;
+            border-left-color: #ffe66d;
+        }
+        .spot-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .spot-icon.hotel { background: #ff6b6b; }
+        .spot-icon.attraction { background: #4ecdc4; }
+        .spot-icon.food { background: #ffe66d; }
+        .spot-icon.transport { background: #95e1d3; }
+        .spot-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .spot-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .spot-desc {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .spot-arrow {
+            color: #555;
+            font-size: 0.8rem;
+        }
+        .spot-item:hover .spot-arrow {
+            color: #4ecdc4;
+        }
+        
+        /* Detail Panel */
+        .spot-detail {
+            background: #232350;
+            padding: 12px 12px 12px 28px;
+            display: none;
+            border-left: 3px solid #ffe66d;
+            animation: slideDown 0.2s ease-out;
+        }
+        .spot-detail.show {
+            display: block;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+        .detail-label {
+            color: #888;
+            min-width: 60px;
+        }
+        .detail-value {
+            color: #fff;
+        }
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .status-booked {
+            background: #2ecc71;
+            color: #fff;
+        }
+        .status-pending {
+            background: #f39c12;
+            color: #fff;
+        }
+        .status-none {
+            background: #555;
+            color: #aaa;
+        }
+        .price-tag {
+            color: #ffe66d;
+            font-weight: 600;
+        }
+        .detail-note {
+            color: #aaa;
+            font-style: italic;
+            font-size: 0.75rem;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px dashed #3a3a6a;
+        }
+
+        /* Expense Summary */
+        .expense-summary {
+            padding: 15px 20px;
+            background: #1a1a2e;
+            border-top: 1px solid #2a2a5a;
+        }
+        .expense-summary h3 {
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            color: #ffe66d;
+        }
+        .expense-person {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #232350;
+            border-radius: 8px;
+        }
+        .person-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .expense-items {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+        .expense-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .expense-total {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #3a3a6a;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4ecdc4;
+            text-align: right;
+        }
+        .grand-total {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #1a1a2e;
+        }
+
+        /* Legend */
+        .legend {
+            padding: 15px 20px;
+            background: #1a1a2e;
+            border-top: 1px solid #2a2a5a;
+        }
+        .legend h3 {
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+        }
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .legend-color.hotel { background: #ff6b6b; }
+        .legend-color.attraction { background: #4ecdc4; }
+        .legend-color.food { background: #ffe66d; }
+        .legend-color.transport { background: #95e1d3; }
+        
+        .leaflet-popup-content-wrapper {
+            background: #16213e;
+            color: #fff;
+            border-radius: 10px;
+        }
+        .leaflet-popup-content {
+            margin: 12px;
+        }
+        .leaflet-popup-tip {
+            background: #16213e;
+        }
+        .popup-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        .popup-day {
+            font-size: 0.75rem;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+        .popup-desc {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column-reverse;
+            }
+            .sidebar {
+                width: 100%;
+                height: 45vh;
+            }
+            #map {
+                height: 55vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="map"></div>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🇯🇵 2026 日本行程</h1>
+                <p class="subtitle">2/26 - 3/7 ・ 10天9夜 ・ 點擊地點查看詳情</p>
+            </div>
+            
+            <div class="days-container" id="days-container"></div>
+            
+            <div class="expense-summary">
+                <h3>💰 已付款總額</h3>
+                <div class="expense-person">
+                    <div class="person-name">🧑 嘎逼</div>
+                    <div class="expense-items">
+                        <div class="expense-row"><span>機票來回（E712SF）</span><span>NT$16,056</span></div>
+                        <div class="expense-row"><span>草津望雲 2晚</span><span>¥118,800 ≈ NT$26,136</span></div>
+                    </div>
+                    <div class="expense-total">小計：NT$42,192</div>
+                </div>
+                <div class="expense-person">
+                    <div class="person-name">👩 芯瑜</div>
+                    <div class="expense-items">
+                        <div class="expense-row"><span>機票來回（ICC4QT）</span><span>NT$20,602</span></div>
+                        <div class="expense-row"><span>APA Hotel 4晚</span><span>¥68,200 ≈ NT$15,004</span></div>
+                        <div class="expense-row"><span>OMO5 五反田 3晚</span><span>¥72,600 ≈ NT$15,972</span></div>
+                    </div>
+                    <div class="expense-total">小計：NT$51,578</div>
+                </div>
+                <div class="grand-total">
+                    <span>兩人合計</span>
+                    <span>NT$93,770</span>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h3>📍 圖例</h3>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color hotel"></div>
+                        <span>住宿</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color attraction"></div>
+                        <span>景點</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color food"></div>
+                        <span>餐廳</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color transport"></div>
+                        <span>交通</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([35.7, 139.5], 10);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // All itinerary data with detailed info
+        const itinerary = [
+            {
+                day: 1,
+                date: "2/26 四",
+                title: "抵達・上野",
+                spots: [
+                    { 
+                        name: "成田機場", 
+                        lat: 35.7720, lng: 140.3929, 
+                        type: "transport", 
+                        desc: "12:30 抵達", 
+                        icon: "✈️",
+                        details: {
+                            time: "12:30 抵達",
+                            booking: "booked",
+                            bookingNote: "AirAsia FD234｜已預約 ✓",
+                            bookedBy: "各自預訂",
+                            bookingNumber: "嘎逼 E712SF ／ 芯瑜 ICC4QT",
+                            price: "嘎逼 NT$16,056 ／ 芯瑜 NT$20,602",
+                            priceNTD: "兩人合計 NT$36,658",
+                            paidBy: "各自付款",
+                            paymentStatus: "✅ 皆已付",
+                            note: "08:05小港出發｜嘎逼座位1A 芯瑜座位1B｜機上餐：焗烤雙起司通心粉／義大利雞肉千層麵"
+                        }
+                    },
+                    { 
+                        name: "APA Hotel 上野站前", 
+                        lat: 35.7138, lng: 139.7774, 
+                        type: "hotel", 
+                        desc: "🏨 住宿 4晚", 
+                        icon: "🏨",
+                        details: {
+                            time: "15:00 Check-in",
+                            booking: "booked",
+                            bookingNote: "已預約 ✓",
+                            bookedBy: "芯瑜（KUO HSINYU）",
+                            bookingNumber: "250730000329",
+                            price: "¥68,200（4晚）",
+                            priceNTD: "≈ NT$15,004",
+                            paidBy: "芯瑜",
+                            paymentStatus: "✅ 信用卡已付（日幣）",
+                            note: "房間偏小，考慮換其他飯店",
+                            website: "https://www.apahotel.com/hotel/shutoken/tokyo/ueno-ekimae/"
+                        }
+                    },
+                    { 
+                        name: "上野恩賜公園", 
+                        lat: 35.7146, lng: 139.7732, 
+                        type: "attraction", 
+                        desc: "梅花季散步", 
+                        icon: "🌸",
+                        details: {
+                            time: "13:30-16:00",
+                            booking: "none",
+                            price: "免費",
+                            note: "2月底梅花盛開"
+                        }
+                    },
+                    { 
+                        name: "阿美橫丁", 
+                        lat: 35.7085, lng: 139.7745, 
+                        type: "attraction", 
+                        desc: "購物街", 
+                        icon: "🛍️",
+                        details: {
+                            time: "16:00-18:00",
+                            booking: "none",
+                            price: null,
+                            note: "藥妝、零食、海鮮"
+                        }
+                    },
+                    { 
+                        name: "敘敘苑 上野不忍口店", 
+                        lat: 35.7128, lng: 139.7743, 
+                        type: "food", 
+                        desc: "18:00 晚餐", 
+                        icon: "🥩",
+                        details: {
+                            time: "18:00",
+                            booking: "booked",
+                            bookingNote: "已預約 ✓",
+                            bookedBy: "嘎逼（lee chichieh）",
+                            bookingNumber: "官網線上預約",
+                            price: "約 ¥13,500-15,000/人（預估）",
+                            priceNTD: "≈ NT$2,970-3,300/人",
+                            paymentStatus: "現場付款",
+                            note: "月之宴套餐，無低消限制",
+                            website: "https://www.jojoen.co.jp/"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 2,
+                date: "2/27 五",
+                title: "淺草・晴空塔",
+                spots: [
+                    { 
+                        name: "淺草寺・雷門", 
+                        lat: 35.7148, lng: 139.7967, 
+                        type: "attraction", 
+                        desc: "東京必訪", 
+                        icon: "⛩️",
+                        details: {
+                            time: "10:00-12:00",
+                            booking: "none",
+                            price: "免費",
+                            note: "仲見世通逛街",
+                            website: "https://www.senso-ji.jp/"
+                        }
+                    },
+                    { 
+                        name: "淺草今半 本店", 
+                        lat: 35.7121, lng: 139.7945, 
+                        type: "food", 
+                        desc: "壽喜燒午餐", 
+                        icon: "🍲",
+                        details: {
+                            time: "12:00",
+                            booking: "pending",
+                            bookingNote: "需預約（1月底處理）",
+                            price: "約 ¥4,400-6,000/人（預估）",
+                            priceNTD: "≈ NT$968-1,320/人",
+                            note: "午間套餐較划算",
+                            website: "https://www.asakusaimahan.co.jp/"
+                        }
+                    },
+                    { 
+                        name: "隅田公園", 
+                        lat: 35.7165, lng: 139.8015, 
+                        type: "attraction", 
+                        desc: "可能有早櫻", 
+                        icon: "🌸",
+                        details: {
+                            time: "14:00-15:00",
+                            booking: "none",
+                            price: "免費",
+                            note: "看運氣，可能有早開櫻花"
+                        }
+                    },
+                    { 
+                        name: "東京晴空塔", 
+                        lat: 35.7101, lng: 139.8107, 
+                        type: "attraction", 
+                        desc: "展望台・購物", 
+                        icon: "🗼",
+                        details: {
+                            time: "15:00-19:00",
+                            booking: "none",
+                            price: "約 ¥2,100-3,100（預估）",
+                            priceNTD: "≈ NT$462-682",
+                            note: "可現場買票或預購",
+                            website: "https://www.tokyo-skytree.jp/"
+                        }
+                    },
+                    { 
+                        name: "利久牛舌 晴空塔店", 
+                        lat: 35.7101, lng: 139.8107, 
+                        type: "food", 
+                        desc: "6F 晚餐", 
+                        icon: "🥢",
+                        details: {
+                            time: "19:00",
+                            booking: "none",
+                            bookingNote: "免預約",
+                            price: "約 ¥2,410-3,890/人（預估）",
+                            priceNTD: "≈ NT$530-856/人",
+                            note: "極厚牛舌定食必點，營業到23:00",
+                            website: "https://www.rikyu-gyutan.co.jp/"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 3,
+                date: "2/28 六",
+                title: "銀座・東京車站",
+                spots: [
+                    { 
+                        name: "Ginza Sony Park", 
+                        lat: 35.6735, lng: 139.7635, 
+                        type: "attraction", 
+                        desc: "2025新開幕", 
+                        icon: "🎮",
+                        details: {
+                            time: "11:00-12:30",
+                            booking: "none",
+                            price: "免費",
+                            note: "藤本壯介設計，銀座站B9出口直通",
+                            website: "https://www.sonypark.com/"
+                        }
+                    },
+                    { 
+                        name: "GINZA SIX", 
+                        lat: 35.6696, lng: 139.7636, 
+                        type: "attraction", 
+                        desc: "銀座購物", 
+                        icon: "🛍️",
+                        details: {
+                            time: "12:30-15:00",
+                            booking: "none",
+                            price: null,
+                            note: "高端購物中心，頂樓有花園"
+                        }
+                    },
+                    { 
+                        name: "銀座三越", 
+                        lat: 35.6717, lng: 139.7653, 
+                        type: "attraction", 
+                        desc: "百貨公司", 
+                        icon: "🏬",
+                        details: {
+                            time: "下午",
+                            booking: "none",
+                            price: null,
+                            note: "B2食品區很厲害"
+                        }
+                    },
+                    { 
+                        name: "東京車站", 
+                        lat: 35.6812, lng: 139.7671, 
+                        type: "transport", 
+                        desc: "一番街・KITTE", 
+                        icon: "🚉",
+                        details: {
+                            time: "15:30-18:00",
+                            booking: "none",
+                            price: null,
+                            note: "東京車站一番街、大丸百貨"
+                        }
+                    },
+                    { 
+                        name: "東京車站拉麵街", 
+                        lat: 35.6805, lng: 139.7680, 
+                        type: "food", 
+                        desc: "B1 晚餐", 
+                        icon: "🍜",
+                        details: {
+                            time: "18:00",
+                            booking: "none",
+                            price: "約 ¥1,000-1,500/人（預估）",
+                            priceNTD: "≈ NT$220-330/人",
+                            note: "六厘舍沾麵、斑鳩拉麵人氣高"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 4,
+                date: "3/1 日",
+                title: "豐洲・teamLab",
+                spots: [
+                    { 
+                        name: "豐洲市場", 
+                        lat: 35.6425, lng: 139.7813, 
+                        type: "food", 
+                        desc: "早餐・週日有開", 
+                        icon: "🐟",
+                        details: {
+                            time: "09:00-10:30",
+                            booking: "none",
+                            price: "約 ¥2,000-4,000/人（預估）",
+                            priceNTD: "≈ NT$440-880/人",
+                            note: "壽司大、大和壽司排隊長",
+                            website: "https://www.toyosu-market.or.jp/"
+                        }
+                    },
+                    { 
+                        name: "teamLab Planets", 
+                        lat: 35.6433, lng: 139.7875, 
+                        type: "attraction", 
+                        desc: "2025擴大1.5倍", 
+                        icon: "🎨",
+                        details: {
+                            time: "12:00-15:00",
+                            booking: "pending",
+                            bookingNote: "需預購（12月處理）",
+                            price: "約 ¥3,800-4,200/人（預估）",
+                            priceNTD: "≈ NT$836-924/人",
+                            note: "穿短褲、赤腳參觀，有水深至小腿",
+                            website: "https://www.teamlab.art/jp/e/planets/"
+                        }
+                    },
+                    { 
+                        name: "萬葉俱樂部", 
+                        lat: 35.6428, lng: 139.7848, 
+                        type: "attraction", 
+                        desc: "溫泉設施", 
+                        icon: "♨️",
+                        details: {
+                            time: "15:00-17:30",
+                            booking: "none",
+                            price: "約 ¥2,900/人（預估）",
+                            priceNTD: "≈ NT$638/人",
+                            note: "可泡湯休息，有餐廳",
+                            website: "https://www.manyo.co.jp/toyosu/"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 5,
+                date: "3/2 一",
+                title: "上野→草津溫泉",
+                spots: [
+                    { 
+                        name: "上野站", 
+                        lat: 35.7141, lng: 139.7774, 
+                        type: "transport", 
+                        desc: "11:30 JR特急草津號", 
+                        icon: "🚃",
+                        details: {
+                            time: "11:30",
+                            booking: "pending",
+                            bookingNote: "JR東京廣域周遊券（待購買）",
+                            price: "約 ¥10,180/人（預估）",
+                            priceNTD: "≈ NT$2,240/人",
+                            note: "3日券，車程約2.5小時"
+                        }
+                    },
+                    { 
+                        name: "長野原草津口站", 
+                        lat: 36.5547, lng: 138.6419, 
+                        type: "transport", 
+                        desc: "14:00 抵達", 
+                        icon: "🚉",
+                        details: {
+                            time: "14:00",
+                            booking: "none",
+                            price: "約 ¥710/人（預估）",
+                            priceNTD: "≈ NT$156/人",
+                            note: "轉JR關東巴士25分鐘到草津"
+                        }
+                    },
+                    { 
+                        name: "草津望雲旅館", 
+                        lat: 36.6230, lng: 138.5948, 
+                        type: "hotel", 
+                        desc: "🏨 住宿 2晚", 
+                        icon: "🏨",
+                        details: {
+                            time: "14:00 Check-in",
+                            booking: "booked",
+                            bookingNote: "已預約 ✓",
+                            bookedBy: "嘎逼（李季潔）",
+                            bookingNumber: "2025091126721444",
+                            price: "¥118,800（2晚含早晚餐）",
+                            priceNTD: "≈ NT$26,136",
+                            paidBy: "嘎逼",
+                            paymentStatus: "✅ 信用卡已付（日幣）2025/9/11",
+                            note: "雲松庵和室，含地酒+湯美人紅酒白酒玫瑰酒特典",
+                            website: "https://www.hotelboun.com/"
+                        }
+                    },
+                    { 
+                        name: "湯畑", 
+                        lat: 36.6219, lng: 138.5960, 
+                        type: "attraction", 
+                        desc: "草津溫泉中心", 
+                        icon: "♨️",
+                        details: {
+                            time: "16:00",
+                            booking: "none",
+                            price: "免費",
+                            note: "草津地標，夜間點燈很美"
+                        }
+                    },
+                    { 
+                        name: "熱乃湯", 
+                        lat: 36.6215, lng: 138.5958, 
+                        type: "attraction", 
+                        desc: "湯揉表演", 
+                        icon: "🎭",
+                        details: {
+                            time: "16:30 或 17:00",
+                            booking: "none",
+                            price: "約 ¥700/人（預估）",
+                            priceNTD: "≈ NT$154/人",
+                            note: "傳統湯揉表演，約20分鐘"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 6,
+                date: "3/3 二",
+                title: "草津溫泉整日",
+                spots: [
+                    { 
+                        name: "西之河原公園", 
+                        lat: 36.6237, lng: 138.5905, 
+                        type: "attraction", 
+                        desc: "溫泉川散步", 
+                        icon: "🌲",
+                        details: {
+                            time: "10:00-11:00",
+                            booking: "none",
+                            price: "免費",
+                            note: "河床冒出溫泉，冬天有雪景"
+                        }
+                    },
+                    { 
+                        name: "西之河原露天風呂", 
+                        lat: 36.6245, lng: 138.5895, 
+                        type: "attraction", 
+                        desc: "超大露天風呂", 
+                        icon: "♨️",
+                        details: {
+                            time: "11:00-12:00",
+                            booking: "none",
+                            price: "約 ¥600/人（預估）",
+                            priceNTD: "≈ NT$132/人",
+                            note: "500㎡超大露天，男女分開"
+                        }
+                    },
+                    { 
+                        name: "大瀧乃湯", 
+                        lat: 36.6195, lng: 138.5942, 
+                        type: "attraction", 
+                        desc: "公共浴場", 
+                        icon: "♨️",
+                        details: {
+                            time: "15:00",
+                            booking: "none",
+                            price: "約 ¥980/人（預估）",
+                            priceNTD: "≈ NT$216/人",
+                            note: "有合湯（漸進式泡湯）體驗"
+                        }
+                    },
+                    { 
+                        name: "御座之湯", 
+                        lat: 36.6217, lng: 138.5955, 
+                        type: "attraction", 
+                        desc: "公共浴場", 
+                        icon: "♨️",
+                        details: {
+                            time: "下午",
+                            booking: "none",
+                            price: "約 ¥700/人（預估）",
+                            priceNTD: "≈ NT$154/人",
+                            note: "湯畑旁，江戶風建築"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 7,
+                date: "3/4 三",
+                title: "輕井澤→東京",
+                spots: [
+                    { 
+                        name: "草津巴士總站", 
+                        lat: 36.6213, lng: 138.5963, 
+                        type: "transport", 
+                        desc: "10:30 草輕巴士", 
+                        icon: "🚌",
+                        details: {
+                            time: "10:30",
+                            booking: "none",
+                            price: "約 ¥2,240/人（預估）",
+                            priceNTD: "≈ NT$493/人",
+                            note: "車程約80分鐘到輕井澤"
+                        }
+                    },
+                    { 
+                        name: "輕井澤王子購物廣場", 
+                        lat: 36.3411, lng: 138.6350, 
+                        type: "attraction", 
+                        desc: "Outlet 240+店", 
+                        icon: "🛍️",
+                        details: {
+                            time: "12:00-16:00",
+                            booking: "none",
+                            price: null,
+                            note: "TNF、GUCCI、COACH等，南口步行3分",
+                            website: "https://www.karuizawa-psp.jp/"
+                        }
+                    },
+                    { 
+                        name: "輕井澤站", 
+                        lat: 36.3447, lng: 138.6358, 
+                        type: "transport", 
+                        desc: "16:30 北陸新幹線", 
+                        icon: "🚄",
+                        details: {
+                            time: "16:30",
+                            booking: "none",
+                            bookingNote: "JR東京廣域周遊券可用",
+                            price: "周遊券含",
+                            note: "車程約70分鐘到東京"
+                        }
+                    },
+                    { 
+                        name: "OMO5 五反田", 
+                        lat: 35.6261, lng: 139.7234, 
+                        type: "hotel", 
+                        desc: "🏨 住宿 3晚", 
+                        icon: "🏨",
+                        details: {
+                            time: "15:00 Check-in",
+                            booking: "booked",
+                            bookingNote: "已預約 ✓",
+                            bookedBy: "芯瑜（KUO HSINYU）",
+                            bookingNumber: "（星野官網預約）",
+                            price: "¥72,600（3晚）",
+                            priceNTD: "≈ NT$15,972",
+                            paidBy: "芯瑜",
+                            paymentStatus: "✅ 信用卡已付（日幣）",
+                            note: "星野集團，2人特大號床，近目黑川，可獲2,975點",
+                            website: "https://hoshinoresorts.com/ja/hotels/omo5tokyogotanda/"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 8,
+                date: "3/5 四",
+                title: "⚾ WBC 台灣vs澳洲",
+                spots: [
+                    { 
+                        name: "東京巨蛋", 
+                        lat: 35.7056, lng: 139.7519, 
+                        type: "attraction", 
+                        desc: "⚾ 11:00 台灣vs澳洲", 
+                        icon: "⚾",
+                        details: {
+                            time: "11:00 開賽",
+                            booking: "pending",
+                            bookingNote: "1/15 18:00 搶票",
+                            price: "約 ¥3,000起/人（預估）",
+                            priceNTD: "≈ NT$660起/人",
+                            note: "指定席B｜Lawson Ticket購票｜三壘側A38-41為台灣應援席",
+                            website: "https://www.tokyo-dome.co.jp/"
+                        }
+                    },
+                    { 
+                        name: "水道橋站", 
+                        lat: 35.7025, lng: 139.7538, 
+                        type: "transport", 
+                        desc: "JR中央線", 
+                        icon: "🚉",
+                        details: {
+                            time: null,
+                            booking: "none",
+                            price: null,
+                            note: "從五反田約25分鐘"
+                        }
+                    },
+                    { 
+                        name: "Shibuya Sky", 
+                        lat: 35.6584, lng: 139.7022, 
+                        type: "attraction", 
+                        desc: "展望台・日落17:30", 
+                        icon: "🌆",
+                        details: {
+                            time: "16:00-18:30",
+                            booking: "pending",
+                            bookingNote: "建議預購",
+                            price: "約 ¥2,200/人（預估）",
+                            priceNTD: "≈ NT$484/人",
+                            note: "澀谷站直結，360度露天展望",
+                            website: "https://www.shibuya-scramble-square.com/sky/"
+                        }
+                    },
+                    { 
+                        name: "澀谷", 
+                        lat: 35.6580, lng: 139.7016, 
+                        type: "attraction", 
+                        desc: "晚餐・逛街", 
+                        icon: "🛍️",
+                        details: {
+                            time: "18:30-21:00",
+                            booking: "none",
+                            price: null,
+                            note: "109、PARCO、忠犬八公像"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 9,
+                date: "3/6 五",
+                title: "⚾ WBC 台日大戰",
+                spots: [
+                    { 
+                        name: "Artizon Museum", 
+                        lat: 35.6776, lng: 139.7707, 
+                        type: "attraction", 
+                        desc: "美術館", 
+                        icon: "🖼️",
+                        details: {
+                            time: "10:00-12:30",
+                            booking: "pending",
+                            bookingNote: "需網路預約（12月處理）",
+                            price: "約 ¥1,800/人（預估）",
+                            priceNTD: "≈ NT$396/人",
+                            note: "展覽：Sophie Taeuber-Arp & Jean Arp",
+                            website: "https://www.artizon.museum/"
+                        }
+                    },
+                    { 
+                        name: "東京車站周邊", 
+                        lat: 35.6812, lng: 139.7671, 
+                        type: "food", 
+                        desc: "午餐", 
+                        icon: "🍽️",
+                        details: {
+                            time: "12:30-14:00",
+                            booking: "none",
+                            price: null,
+                            note: "八重洲口步行5分鐘到美術館"
+                        }
+                    },
+                    { 
+                        name: "東京巨蛋", 
+                        lat: 35.7056, lng: 139.7519, 
+                        type: "attraction", 
+                        desc: "⚾ 18:00 台灣vs日本 🔥", 
+                        icon: "⚾",
+                        details: {
+                            time: "18:00 開賽",
+                            booking: "pending",
+                            bookingNote: "1/15 18:00 搶票（最搶手！）",
+                            price: "約 ¥6,500起/人（預估）",
+                            priceNTD: "≈ NT$1,430起/人",
+                            note: "指定席C｜🔥大谷翔平確定參賽！日本隊場次最貴",
+                            website: "https://www.tokyo-dome.co.jp/"
+                        }
+                    }
+                ]
+            },
+            {
+                day: 10,
+                date: "3/7 六",
+                title: "返程",
+                spots: [
+                    { 
+                        name: "五反田站", 
+                        lat: 35.6261, lng: 139.7234, 
+                        type: "transport", 
+                        desc: "09:00 JR山手線", 
+                        icon: "🚃",
+                        details: {
+                            time: "09:00",
+                            booking: "none",
+                            price: null,
+                            note: "到品川約5分鐘"
+                        }
+                    },
+                    { 
+                        name: "品川站", 
+                        lat: 35.6284, lng: 139.7387, 
+                        type: "transport", 
+                        desc: "09:15 N'EX成田特快", 
+                        icon: "🚄",
+                        details: {
+                            time: "09:15",
+                            booking: "none",
+                            price: "約 ¥3,250/人（預估）",
+                            priceNTD: "≈ NT$715/人",
+                            note: "車程約70分鐘到成田"
+                        }
+                    },
+                    { 
+                        name: "成田機場", 
+                        lat: 35.7720, lng: 140.3929, 
+                        type: "transport", 
+                        desc: "13:30 起飛返台", 
+                        icon: "✈️",
+                        details: {
+                            time: "13:30 起飛",
+                            booking: "booked",
+                            bookingNote: "AirAsia FD235｜已預約 ✓",
+                            bookedBy: "各自預訂",
+                            bookingNumber: "嘎逼 E712SF ／ 芯瑜 ICC4QT",
+                            price: "（含在來回票）",
+                            priceNTD: null,
+                            paidBy: "各自付款",
+                            paymentStatus: "✅ 皆已付",
+                            note: "16:55抵達小港｜嘎逼座位1F 芯瑜座位1E｜託運各20kg"
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // Color mapping
+        const colors = {
+            hotel: '#ff6b6b',
+            attraction: '#4ecdc4',
+            food: '#ffe66d',
+            transport: '#95e1d3'
+        };
+
+        // Store markers and state
+        const markers = {};
+        let activeSpotEl = null;
+        let activeDetailEl = null;
+
+        // Create custom icon
+        function createIcon(color, emoji = '') {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="
+                    background: ${color};
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 14px;
+                ">${emoji}</div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+        }
+
+        // Generate booking status badge
+        function getBookingBadge(status, note) {
+            if (status === 'booked') {
+                return `<span class="status-badge status-booked">已預約</span> ${note || ''}`;
+            } else if (status === 'pending') {
+                return `<span class="status-badge status-pending">待處理</span> ${note || ''}`;
+            }
+            return `<span class="status-badge status-none">免預約</span>`;
+        }
+
+        // Generate detail panel HTML
+        function createDetailPanel(spot) {
+            const d = spot.details;
+            let html = '<div class="spot-detail">';
+            
+            if (d.time) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">⏰ 時間</span>
+                    <span class="detail-value">${d.time}</span>
+                </div>`;
+            }
+            
+            html += `<div class="detail-row">
+                <span class="detail-label">📋 預約</span>
+                <span class="detail-value">${getBookingBadge(d.booking, d.bookingNote)}</span>
+            </div>`;
+            
+            if (d.bookedBy) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">👤 預約人</span>
+                    <span class="detail-value"><strong style="color:#4ecdc4;">${d.bookedBy}</strong></span>
+                </div>`;
+            }
+            
+            if (d.bookingNumber) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">🔖 預約號</span>
+                    <span class="detail-value" style="font-family:monospace;color:#ffe66d;">${d.bookingNumber}</span>
+                </div>`;
+            }
+            
+            if (d.price) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">💰 費用</span>
+                    <span class="detail-value"><span class="price-tag">${d.price}</span></span>
+                </div>`;
+                if (d.priceNTD) {
+                    html += `<div class="detail-row">
+                        <span class="detail-label"></span>
+                        <span class="detail-value" style="color:#aaa;font-size:0.75rem;">${d.priceNTD}</span>
+                    </div>`;
+                }
+            }
+            
+            if (d.paidBy) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">💳 付款人</span>
+                    <span class="detail-value"><strong style="color:#ff6b6b;">${d.paidBy}</strong></span>
+                </div>`;
+            }
+            
+            if (d.paymentStatus) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">📌 狀態</span>
+                    <span class="detail-value">${d.paymentStatus}</span>
+                </div>`;
+            }
+            
+            if (d.website) {
+                html += `<div class="detail-row">
+                    <span class="detail-label">🔗 官網</span>
+                    <span class="detail-value"><a href="${d.website}" target="_blank" style="color:#4ecdc4;text-decoration:none;">點此開啟 ↗</a></span>
+                </div>`;
+            }
+            
+            if (d.note) {
+                html += `<div class="detail-note">📝 ${d.note}</div>`;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        // Generate sidebar and markers
+        const container = document.getElementById('days-container');
+        
+        itinerary.forEach(dayData => {
+            const daySection = document.createElement('div');
+            daySection.className = 'day-section';
+            
+            // Day header
+            const header = document.createElement('div');
+            header.className = 'day-header';
+            header.innerHTML = `
+                <span class="day-badge">Day ${dayData.day}</span>
+                <div class="day-info">
+                    <div class="day-date">${dayData.date}</div>
+                    <div class="day-title">${dayData.title}</div>
+                </div>
+                <span class="day-toggle">▼</span>
+            `;
+            
+            header.addEventListener('click', () => {
+                daySection.classList.toggle('expanded');
+            });
+            
+            // Spots list
+            const spotsList = document.createElement('div');
+            spotsList.className = 'spots-list';
+            
+            dayData.spots.forEach((spot, idx) => {
+                // Create marker
+                const markerId = `day${dayData.day}-${idx}`;
+                const marker = L.marker([spot.lat, spot.lng], { 
+                    icon: createIcon(colors[spot.type], spot.icon) 
+                }).bindPopup(`
+                    <div class="popup-day">Day ${dayData.day} - ${dayData.date}</div>
+                    <div class="popup-title">${spot.name}</div>
+                    <div class="popup-desc">${spot.desc}</div>
+                `);
+                marker.addTo(map);
+                markers[markerId] = marker;
+                
+                // Create spot container
+                const spotContainer = document.createElement('div');
+                
+                // Create spot item
+                const spotItem = document.createElement('div');
+                spotItem.className = 'spot-item';
+                spotItem.innerHTML = `
+                    <div class="spot-icon ${spot.type}">${spot.icon}</div>
+                    <div class="spot-info">
+                        <div class="spot-name">${spot.name}</div>
+                        <div class="spot-desc">${spot.desc}</div>
+                    </div>
+                    <span class="spot-arrow">▼</span>
+                `;
+                
+                // Create detail panel
+                const detailPanel = document.createElement('div');
+                detailPanel.innerHTML = createDetailPanel(spot);
+                const detailEl = detailPanel.firstChild;
+                
+                // Click handler
+                spotItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // Toggle detail panel
+                    if (activeDetailEl && activeDetailEl !== detailEl) {
+                        activeDetailEl.classList.remove('show');
+                    }
+                    if (activeSpotEl && activeSpotEl !== spotItem) {
+                        activeSpotEl.classList.remove('active');
+                        activeSpotEl.querySelector('.spot-arrow').textContent = '▼';
+                    }
+                    
+                    const isOpen = detailEl.classList.contains('show');
+                    
+                    if (isOpen) {
+                        detailEl.classList.remove('show');
+                        spotItem.classList.remove('active');
+                        spotItem.querySelector('.spot-arrow').textContent = '▼';
+                        activeDetailEl = null;
+                        activeSpotEl = null;
+                    } else {
+                        detailEl.classList.add('show');
+                        spotItem.classList.add('active');
+                        spotItem.querySelector('.spot-arrow').textContent = '▲';
+                        activeDetailEl = detailEl;
+                        activeSpotEl = spotItem;
+                        
+                        // Fly to location
+                        map.flyTo([spot.lat, spot.lng], 16, { duration: 0.8 });
+                        setTimeout(() => markers[markerId].openPopup(), 400);
+                    }
+                });
+                
+                spotContainer.appendChild(spotItem);
+                spotContainer.appendChild(detailEl);
+                spotsList.appendChild(spotContainer);
+            });
+            
+            daySection.appendChild(header);
+            daySection.appendChild(spotsList);
+            container.appendChild(daySection);
+        });
+
+        // Draw route
+        const routePoints = [
+            [35.7720, 140.3929],
+            [35.7138, 139.7774],
+            [35.7148, 139.7967],
+            [35.6735, 139.7635],
+            [35.6433, 139.7875],
+            [36.6219, 138.5960],
+            [36.3447, 138.6358],
+            [35.6261, 139.7234],
+            [35.7056, 139.7519],
+            [35.6284, 139.7387],
+            [35.7720, 140.3929]
+        ];
+
+        L.polyline(routePoints, {
+            color: '#4ecdc4',
+            weight: 2,
+            opacity: 0.4,
+            dashArray: '8, 8'
+        }).addTo(map);
+
+        // Expand Day 1 by default
+        document.querySelector('.day-section').classList.add('expanded');
+
+        // Fit bounds
+        const allLatLngs = Object.values(markers).map(m => m.getLatLng());
+        map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+    </script>
+</body>
+</html>
