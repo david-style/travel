@@ -310,6 +310,31 @@
             padding-top: 5px;
             border-top: 1px dashed #3a3a6a;
         }
+        
+        /* 導航按鈕 */
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
 
         /* Expense Summary */
         .expense-summary {
@@ -1414,6 +1439,14 @@
             const d = spot.details;
             let html = '<div class="spot-detail">';
             
+            // Google Maps 導航按鈕
+            html += `<a href="https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}&destination_place_id=${encodeURIComponent(spot.name)}" 
+                target="_blank" 
+                class="nav-btn"
+                onclick="event.stopPropagation();">
+                🧭 導航到這裡
+            </a>`;
+            
             if (d.time) {
                 html += `<div class="detail-row">
                     <span class="detail-label">⏰ 時間</span>
@@ -1518,6 +1551,11 @@
                     <div class="popup-day">Day ${dayData.day} - ${dayData.date}</div>
                     <div class="popup-title">${spot.name}</div>
                     <div class="popup-desc">${spot.desc}</div>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}" 
+                       target="_blank" 
+                       style="display:block; margin-top:10px; padding:8px 12px; background:linear-gradient(135deg, #4285f4 0%, #34a853 100%); border-radius:6px; color:#fff; text-decoration:none; text-align:center; font-weight:600; font-size:0.85rem;">
+                       🧭 導航
+                    </a>
                 `);
                 marker.addTo(map);
                 markers[markerId] = marker;
