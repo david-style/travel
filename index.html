@@ -455,10 +455,20 @@
                 width: 100%;
                 height: 50vh;
                 height: 50dvh;
+                transition: height 0.3s ease;
+            }
+            .sidebar.map-hidden {
+                height: 100vh;
+                height: 100dvh;
             }
             #map {
                 height: 50vh;
                 height: 50dvh;
+                transition: height 0.3s ease;
+            }
+            #map.hidden {
+                height: 0;
+                overflow: hidden;
             }
             .day-header {
                 padding: 16px 12px;
@@ -466,6 +476,32 @@
             .spot-item {
                 padding: 14px 12px 14px 20px;
             }
+            /* 地圖切換按鈕 */
+            .map-toggle-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                padding: 14px;
+                background: linear-gradient(135deg, #2a2a5a 0%, #1a1a3a 100%);
+                border: 1px solid #4ecdc4;
+                border-radius: 0;
+                color: #4ecdc4;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .map-toggle-btn:active {
+                background: linear-gradient(135deg, #3a3a6a 0%, #2a2a4a 100%);
+            }
+        }
+        /* 桌面版隱藏按鈕 */
+        .map-toggle-btn {
+            display: none;
         }
     </style>
 </head>
@@ -487,6 +523,10 @@
     <div class="container">
         <div id="map"></div>
         <div class="sidebar">
+            <button class="map-toggle-btn" id="map-toggle-btn" onclick="toggleMap()">
+                <span id="map-toggle-icon">🗺️</span>
+                <span id="map-toggle-text">顯示地圖</span>
+            </button>
             <div class="sidebar-header">
                 <h1>🇯🇵 2026 日本行程</h1>
                 <p class="subtitle">2/26 - 3/7 ・ 10天9夜 ・ 點擊地點查看詳情</p>
@@ -546,12 +586,50 @@
     </div>
 
     <script>
+        // ========== 地圖切換功能 ==========
+        let mapVisible = true;
+        let mapInitialized = false;
+        
+        function toggleMap() {
+            const mapEl = document.getElementById('map');
+            const sidebar = document.querySelector('.sidebar');
+            const toggleText = document.getElementById('map-toggle-text');
+            const toggleIcon = document.getElementById('map-toggle-icon');
+            
+            mapVisible = !mapVisible;
+            
+            if (mapVisible) {
+                mapEl.classList.remove('hidden');
+                sidebar.classList.remove('map-hidden');
+                toggleText.textContent = '隱藏地圖';
+                toggleIcon.textContent = '🗺️';
+                // 重新調整地圖大小
+                if (mapInitialized) {
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 350);
+                }
+            } else {
+                mapEl.classList.add('hidden');
+                sidebar.classList.add('map-hidden');
+                toggleText.textContent = '顯示地圖';
+                toggleIcon.textContent = '📋';
+            }
+        }
+
         // Initialize map with touch support
         const map = L.map('map', {
             tap: true,
             touchZoom: true,
             dragging: true
         }).setView([35.7, 139.5], 10);
+        
+        mapInitialized = true;
+        
+        // 手機版預設隱藏地圖
+        if (window.innerWidth <= 768) {
+            toggleMap(); // 初始化時隱藏地圖
+        }
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO',
