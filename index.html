@@ -2,15 +2,93 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>2026日本10天9夜行程地圖</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
+        /* 密碼保護畫面 */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: #16213e;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 320px;
+            width: 90%;
+        }
+        .login-box h2 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        .login-box p {
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #2a2a5a;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 1.1rem;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: #4ecdc4;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4ecdc4, #44a8a0);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .login-box button:hover {
+            transform: scale(1.02);
+        }
+        .login-error {
+            color: #ff6b6b;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .login-emoji {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        #main-content {
+            display: none;
+        }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -20,6 +98,7 @@
         .container {
             display: flex;
             height: 100vh;
+            height: 100dvh;
         }
         #map {
             flex: 1;
@@ -29,6 +108,8 @@
             width: 360px;
             background: #16213e;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
             display: flex;
             flex-direction: column;
         }
@@ -48,6 +129,7 @@
         .days-container {
             flex: 1;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 15px;
         }
         .day-section {
@@ -60,11 +142,14 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px;
+            padding: 14px 12px;
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: background 0.2s;
         }
-        .day-header:hover {
+        .day-header:hover, .day-header:active {
             background: #252550;
         }
         .day-badge {
@@ -109,12 +194,15 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 12px 10px 20px;
+            padding: 12px 12px 12px 20px;
             cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
             transition: all 0.2s;
             border-left: 3px solid transparent;
         }
-        .spot-item:hover {
+        .spot-item:hover, .spot-item:active {
             background: #252550;
             border-left-color: #4ecdc4;
         }
@@ -231,8 +319,34 @@
         }
         .expense-summary h3 {
             font-size: 0.9rem;
-            margin-bottom: 12px;
+            margin-bottom: 0;
             color: #ffe66d;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .expense-summary h3:hover, .expense-summary h3:active {
+            opacity: 0.8;
+        }
+        .toggle-arrow {
+            transition: transform 0.3s;
+            font-size: 0.8rem;
+        }
+        .expense-summary.expanded .toggle-arrow {
+            transform: rotate(90deg);
+        }
+        .expense-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .expense-summary.expanded .expense-content {
+            max-height: 500px;
+            margin-top: 12px;
         }
         .expense-person {
             margin-bottom: 12px;
@@ -339,15 +453,37 @@
             }
             .sidebar {
                 width: 100%;
-                height: 45vh;
+                height: 50vh;
+                height: 50dvh;
             }
             #map {
-                height: 55vh;
+                height: 50vh;
+                height: 50dvh;
+            }
+            .day-header {
+                padding: 16px 12px;
+            }
+            .spot-item {
+                padding: 14px 12px 14px 20px;
             }
         }
     </style>
 </head>
 <body>
+    <!-- 密碼保護畫面 -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-emoji">🗾</div>
+            <h2>日本行程地圖</h2>
+            <p>請輸入密碼查看行程</p>
+            <input type="password" id="password-input" placeholder="輸入密碼" maxlength="20" autocomplete="off">
+            <button onclick="checkPassword()">進入 →</button>
+            <div class="login-error" id="login-error">密碼錯誤，請再試一次</div>
+        </div>
+    </div>
+    
+    <!-- 主內容 -->
+    <div id="main-content">
     <div class="container">
         <div id="map"></div>
         <div class="sidebar">
@@ -359,7 +495,8 @@
             <div class="days-container" id="days-container"></div>
             
             <div class="expense-summary">
-                <h3>💰 已付款總額</h3>
+                <h3 class="expense-toggle" onclick="this.parentElement.classList.toggle('expanded')">💰 已付款總額 <span class="toggle-arrow">▶</span></h3>
+                <div class="expense-content">
                 <div class="expense-person">
                     <div class="person-name">🧑 嘎逼</div>
                     <div class="expense-items">
@@ -380,6 +517,7 @@
                 <div class="grand-total">
                     <span>兩人合計</span>
                     <span>NT$93,770</span>
+                </div>
                 </div>
             </div>
             
@@ -408,8 +546,12 @@
     </div>
 
     <script>
-        // Initialize map
-        const map = L.map('map').setView([35.7, 139.5], 10);
+        // Initialize map with touch support
+        const map = L.map('map', {
+            tap: true,
+            touchZoom: true,
+            dragging: true
+        }).setView([35.7, 139.5], 10);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO',
@@ -477,19 +619,6 @@
                         }
                     },
                     { 
-                        name: "阿美橫丁", 
-                        lat: 35.7085, lng: 139.7745, 
-                        type: "attraction", 
-                        desc: "購物街", 
-                        icon: "🛍️",
-                        details: {
-                            time: "16:00-18:00",
-                            booking: "none",
-                            price: null,
-                            note: "藥妝、零食、海鮮"
-                        }
-                    },
-                    { 
                         name: "敘敘苑 上野不忍口店", 
                         lat: 35.7128, lng: 139.7743, 
                         type: "food", 
@@ -506,6 +635,19 @@
                             paymentStatus: "現場付款",
                             note: "月之宴套餐，無低消限制",
                             website: "https://www.jojoen.co.jp/"
+                        }
+                    },
+                    { 
+                        name: "阿美橫丁", 
+                        lat: 35.7085, lng: 139.7745, 
+                        type: "attraction", 
+                        desc: "晚餐後逛街", 
+                        icon: "🛍️",
+                        details: {
+                            time: "20:00-21:00",
+                            booking: "none",
+                            price: null,
+                            note: "藥妝、零食、海鮮｜部分店家營業到晚上"
                         }
                     }
                 ]
@@ -562,15 +704,16 @@
                         name: "東京晴空塔", 
                         lat: 35.7101, lng: 139.8107, 
                         type: "attraction", 
-                        desc: "展望台・購物", 
+                        desc: "16:00 展望台", 
                         icon: "🗼",
                         details: {
-                            time: "15:00-19:00",
-                            booking: "none",
+                            time: "16:00-18:30（看日落+夜景）",
+                            booking: "pending",
+                            bookingNote: "1/28 預購（前30天）",
                             price: "約 ¥2,100-3,100（預估）",
                             priceNTD: "≈ NT$462-682",
-                            note: "可現場買票或預購",
-                            website: "https://www.tokyo-skytree.jp/"
+                            note: "天望甲板350m｜日落約17:30",
+                            website: "https://link-ticket.tokyo-skytree.jp/home"
                         }
                     },
                     { 
@@ -594,20 +737,21 @@
             {
                 day: 3,
                 date: "2/28 六",
-                title: "銀座・東京車站",
+                title: "築地・銀座・東京車站・麻布台",
                 spots: [
                     { 
-                        name: "Ginza Sony Park", 
-                        lat: 35.6735, lng: 139.7635, 
-                        type: "attraction", 
-                        desc: "2025新開幕", 
-                        icon: "🎮",
+                        name: "築地場外市場", 
+                        lat: 35.6654, lng: 139.7707, 
+                        type: "food", 
+                        desc: "早餐", 
+                        icon: "🐟",
                         details: {
-                            time: "11:00-12:30",
+                            time: "08:30-10:00",
                             booking: "none",
-                            price: "免費",
-                            note: "藤本壯介設計，銀座站B9出口直通",
-                            website: "https://www.sonypark.com/"
+                            price: "約 ¥1,500-3,000/人（預估）",
+                            priceNTD: "≈ NT$330-660/人",
+                            note: "玉子燒、海鮮丼、壽司｜場外市場還在營業",
+                            website: "https://www.tsukiji.or.jp/"
                         }
                     },
                     { 
@@ -617,23 +761,24 @@
                         desc: "銀座購物", 
                         icon: "🛍️",
                         details: {
-                            time: "12:30-15:00",
+                            time: "11:00-14:00",
                             booking: "none",
                             price: null,
-                            note: "高端購物中心，頂樓有花園"
+                            note: "🎒 MSPC 5F｜👟 lululemon 4F｜☕ Blue Bottle B2｜👕 Uniqlo 6F｜頂樓花園免費",
+                            website: "https://ginza6.tokyo/"
                         }
                     },
                     { 
-                        name: "銀座三越", 
-                        lat: 35.6717, lng: 139.7653, 
-                        type: "attraction", 
-                        desc: "百貨公司", 
-                        icon: "🏬",
+                        name: "回 APA 放東西", 
+                        lat: 35.7138, lng: 139.7774, 
+                        type: "hotel", 
+                        desc: "放購物袋", 
+                        icon: "🏨",
                         details: {
-                            time: "下午",
+                            time: "14:30",
                             booking: "none",
-                            price: null,
-                            note: "B2食品區很厲害"
+                            price: "¥210（銀座線）",
+                            note: "銀座→上野 15分鐘｜放完再出發"
                         }
                     },
                     { 
@@ -643,24 +788,24 @@
                         desc: "一番街・KITTE", 
                         icon: "🚉",
                         details: {
-                            time: "15:30-18:00",
+                            time: "15:30-17:00",
                             booking: "none",
                             price: null,
-                            note: "東京車站一番街、大丸百貨"
+                            note: "東京車站一番街、大丸百貨、KITTE"
                         }
                     },
                     { 
-                        name: "東京車站拉麵街", 
-                        lat: 35.6805, lng: 139.7680, 
-                        type: "food", 
-                        desc: "B1 晚餐", 
-                        icon: "🍜",
+                        name: "麻布台之丘", 
+                        lat: 35.6602, lng: 139.7394, 
+                        type: "attraction", 
+                        desc: "2023新開幕複合設施", 
+                        icon: "🏙️",
                         details: {
-                            time: "18:00",
+                            time: "17:30-20:00",
                             booking: "none",
-                            price: "約 ¥1,000-1,500/人（預估）",
-                            priceNTD: "≈ NT$220-330/人",
-                            note: "六厘舍沾麵、斑鳩拉麵人氣高"
+                            price: "免費（展望台另計）",
+                            note: "日本最高樓330m｜teamLab Borderless｜高級商場｜神谷町站直結",
+                            website: "https://www.azabudai-hills.com/"
                         }
                     }
                 ]
@@ -668,21 +813,21 @@
             {
                 day: 4,
                 date: "3/1 日",
-                title: "豐洲・teamLab",
+                title: "teamLab・下午待定",
                 spots: [
                     { 
-                        name: "豐洲市場", 
-                        lat: 35.6425, lng: 139.7813, 
+                        name: "APA飯店早餐", 
+                        lat: 35.7138, lng: 139.7774, 
                         type: "food", 
-                        desc: "早餐・週日有開", 
-                        icon: "🐟",
+                        desc: "現場跟服務人員預訂", 
+                        icon: "🍳",
                         details: {
-                            time: "09:00-10:30",
+                            time: "08:00-09:30",
                             booking: "none",
-                            price: "約 ¥2,000-4,000/人（預估）",
-                            priceNTD: "≈ NT$440-880/人",
-                            note: "壽司大、大和壽司排隊長",
-                            website: "https://www.toyosu-market.or.jp/"
+                            bookingNote: "現場預訂",
+                            price: "約 ¥1,500/人（預估）",
+                            priceNTD: "≈ NT$330/人",
+                            note: "需現場跟服務人員預訂"
                         }
                     },
                     { 
@@ -702,18 +847,16 @@
                         }
                     },
                     { 
-                        name: "萬葉俱樂部", 
-                        lat: 35.6428, lng: 139.7848, 
+                        name: "下午待定", 
+                        lat: 35.6433, lng: 139.7900, 
                         type: "attraction", 
-                        desc: "溫泉設施", 
-                        icon: "♨️",
+                        desc: "豐洲附近或其他", 
+                        icon: "❓",
                         details: {
-                            time: "15:00-17:30",
+                            time: "15:00-",
                             booking: "none",
-                            price: "約 ¥2,900/人（預估）",
-                            priceNTD: "≈ NT$638/人",
-                            note: "可泡湯休息，有餐廳",
-                            website: "https://www.manyo.co.jp/toyosu/"
+                            price: null,
+                            note: "待決定｜可選：豐洲逛街、台場鋼彈、上野動物園等"
                         }
                     }
                 ]
@@ -727,29 +870,42 @@
                         name: "上野站", 
                         lat: 35.7141, lng: 139.7774, 
                         type: "transport", 
-                        desc: "11:30 JR特急草津號", 
+                        desc: "10:00 JR特急草津1號", 
                         icon: "🚃",
                         details: {
-                            time: "11:30",
+                            time: "09:30 APA退房 → 10:00 發車",
                             booking: "pending",
                             bookingNote: "JR東京廣域周遊券（待購買）",
                             price: "約 ¥10,180/人（預估）",
                             priceNTD: "≈ NT$2,240/人",
-                            note: "3日券，車程約2.5小時"
+                            note: "3日券，車程約2小時18分"
                         }
                     },
                     { 
                         name: "長野原草津口站", 
                         lat: 36.5547, lng: 138.6419, 
                         type: "transport", 
-                        desc: "14:00 抵達", 
+                        desc: "12:18 抵達 → 12:26 巴士", 
                         icon: "🚉",
                         details: {
-                            time: "14:00",
+                            time: "12:18 到站 → 12:26 巴士",
                             booking: "none",
-                            price: "約 ¥710/人（預估）",
-                            priceNTD: "≈ NT$156/人",
-                            note: "轉JR關東巴士25分鐘到草津"
+                            price: "約 ¥780/人",
+                            priceNTD: "≈ NT$172/人",
+                            note: "巴士25分鐘｜錯過要等2小時（下班14:42）"
+                        }
+                    },
+                    { 
+                        name: "草津溫泉巴士站", 
+                        lat: 36.6213, lng: 138.5963, 
+                        type: "transport", 
+                        desc: "12:51 抵達", 
+                        icon: "🚌",
+                        details: {
+                            time: "12:51",
+                            booking: "none",
+                            price: null,
+                            note: "到站後打電話給望雲，有免費接送"
                         }
                     },
                     { 
@@ -768,7 +924,7 @@
                             priceNTD: "≈ NT$26,136",
                             paidBy: "嘎逼",
                             paymentStatus: "✅ 信用卡已付（日幣）2025/9/11",
-                            note: "雲松庵和室，含地酒+湯美人紅酒白酒玫瑰酒特典",
+                            note: "雲松庵和室｜和牛涮涮鍋晚餐2次+早餐2次｜特典：地酒1本、湯美人紅酒/白酒/玫瑰酒各1本",
                             website: "https://www.hotelboun.com/"
                         }
                     },
@@ -869,6 +1025,19 @@
                 title: "輕井澤→東京",
                 spots: [
                     { 
+                        name: "草津望雲退房", 
+                        lat: 36.6230, lng: 138.5948, 
+                        type: "hotel", 
+                        desc: "10:00 退房（請旅館送去巴士站）", 
+                        icon: "🏨",
+                        details: {
+                            time: "10:00 退房",
+                            booking: "none",
+                            price: null,
+                            note: "請旅館免費送去巴士站"
+                        }
+                    },
+                    { 
                         name: "草津巴士總站", 
                         lat: 36.6213, lng: 138.5963, 
                         type: "transport", 
@@ -877,16 +1046,29 @@
                         details: {
                             time: "10:30",
                             booking: "none",
-                            price: "約 ¥2,240/人（預估）",
+                            price: "約 ¥2,240/人",
                             priceNTD: "≈ NT$493/人",
-                            note: "車程約80分鐘到輕井澤"
+                            note: "車程約85分鐘到輕井澤"
+                        }
+                    },
+                    { 
+                        name: "輕井澤站", 
+                        lat: 36.3447, lng: 138.6358, 
+                        type: "transport", 
+                        desc: "11:55 抵達", 
+                        icon: "🚉",
+                        details: {
+                            time: "11:55 抵達",
+                            booking: "none",
+                            price: null,
+                            note: "Outlet 就在車站旁"
                         }
                     },
                     { 
                         name: "輕井澤王子購物廣場", 
                         lat: 36.3411, lng: 138.6350, 
                         type: "attraction", 
-                        desc: "Outlet 240+店", 
+                        desc: "Outlet 240+店（約4.5小時）", 
                         icon: "🛍️",
                         details: {
                             time: "12:00-16:00",
@@ -897,17 +1079,30 @@
                         }
                     },
                     { 
-                        name: "輕井澤站", 
+                        name: "輕井澤站 新幹線", 
                         lat: 36.3447, lng: 138.6358, 
                         type: "transport", 
-                        desc: "16:30 北陸新幹線", 
+                        desc: "16:23 あさま624", 
                         icon: "🚄",
                         details: {
-                            time: "16:30",
+                            time: "16:23 發車 → 17:28 東京",
                             booking: "none",
                             bookingNote: "JR東京廣域周遊券可用",
-                            price: "周遊券含",
-                            note: "車程約70分鐘到東京"
+                            price: "周遊券含（自由席¥5,490/指定席¥6,020）",
+                            note: "前班15:56あさま622｜後班16:48はくたか568"
+                        }
+                    },
+                    { 
+                        name: "東京站→五反田", 
+                        lat: 35.6812, lng: 139.7671, 
+                        type: "transport", 
+                        desc: "17:28 到東京 → 山手線", 
+                        icon: "🚃",
+                        details: {
+                            time: "17:30 山手線 → 17:50 五反田",
+                            booking: "none",
+                            price: "¥210",
+                            note: "山手線外回り（品川方向）約19分"
                         }
                     },
                     { 
@@ -917,7 +1112,7 @@
                         desc: "🏨 住宿 3晚", 
                         icon: "🏨",
                         details: {
-                            time: "15:00 Check-in",
+                            time: "18:00 Check-in",
                             booking: "booked",
                             bookingNote: "已預約 ✓",
                             bookedBy: "芯瑜（KUO HSINYU）",
@@ -926,7 +1121,7 @@
                             priceNTD: "≈ NT$15,972",
                             paidBy: "芯瑜",
                             paymentStatus: "✅ 信用卡已付（日幣）",
-                            note: "星野集團，2人特大號床，近目黑川，可獲2,975點",
+                            note: "星野集團，2人特大號床，近目黑川，可獲2,975點｜Check-in 15:00-00:00",
                             website: "https://hoshinoresorts.com/ja/hotels/omo5tokyogotanda/"
                         }
                     }
@@ -949,21 +1144,8 @@
                             bookingNote: "1/15 18:00 搶票",
                             price: "約 ¥3,000起/人（預估）",
                             priceNTD: "≈ NT$660起/人",
-                            note: "指定席B｜Lawson Ticket購票｜三壘側A38-41為台灣應援席",
+                            note: "指定席B｜Lawson Ticket購票｜三壘側A38-41為台灣應援席｜從五反田約25分鐘",
                             website: "https://www.tokyo-dome.co.jp/"
-                        }
-                    },
-                    { 
-                        name: "水道橋站", 
-                        lat: 35.7025, lng: 139.7538, 
-                        type: "transport", 
-                        desc: "JR中央線", 
-                        icon: "🚉",
-                        details: {
-                            time: null,
-                            booking: "none",
-                            price: null,
-                            note: "從五反田約25分鐘"
                         }
                     },
                     { 
@@ -1281,8 +1463,9 @@
                 detailPanel.innerHTML = createDetailPanel(spot);
                 const detailEl = detailPanel.firstChild;
                 
-                // Click handler
+                // Click handler with touch support
                 spotItem.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     
                     // Toggle detail panel
@@ -1325,27 +1508,424 @@
             container.appendChild(daySection);
         });
 
-        // Draw route
-        const routePoints = [
-            [35.7720, 140.3929],
-            [35.7138, 139.7774],
-            [35.7148, 139.7967],
-            [35.6735, 139.7635],
-            [35.6433, 139.7875],
-            [36.6219, 138.5960],
-            [36.3447, 138.6358],
-            [35.6261, 139.7234],
-            [35.7056, 139.7519],
-            [35.6284, 139.7387],
-            [35.7720, 140.3929]
+        // Draw route with clickable segments - 按每日行程順序，從飯店出發
+        const routeSegments = [
+            // Day 1: 成田 → APA上野 → 上野公園 → 敘敘苑 → 阿美橫丁
+            {
+                from: "成田機場",
+                to: "APA上野",
+                points: [[35.7720, 140.3929], [35.7138, 139.7774]],
+                transport: "🚃 Skyliner",
+                time: "約 41 分鐘",
+                price: "¥2,520",
+                note: "Day1｜京成電鐵"
+            },
+            {
+                from: "APA上野",
+                to: "上野恩賜公園",
+                points: [[35.7138, 139.7774], [35.7146, 139.7732]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day1｜飯店出來直走"
+            },
+            {
+                from: "上野公園",
+                to: "敘敘苑",
+                points: [[35.7146, 139.7732], [35.7128, 139.7743]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day1｜上野站不忍口旁"
+            },
+            {
+                from: "敘敘苑",
+                to: "阿美橫丁",
+                points: [[35.7128, 139.7743], [35.7085, 139.7745]],
+                transport: "🚶 徒步",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day1｜晚餐後逛街"
+            },
+
+            // Day 2: APA → 淺草 → 今半 → 隅田公園 → 晴空塔 → 利久牛舌
+            {
+                from: "APA上野",
+                to: "淺草寺・雷門",
+                points: [[35.7138, 139.7774], [35.7148, 139.7967]],
+                transport: "🚇 銀座線",
+                time: "約 5 分鐘",
+                price: "¥180",
+                note: "Day2｜上野→淺草（直達）"
+            },
+            {
+                from: "淺草寺",
+                to: "淺草今半",
+                points: [[35.7148, 139.7967], [35.7121, 139.7945]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day2｜午餐壽喜燒"
+            },
+            {
+                from: "淺草今半",
+                to: "隅田公園",
+                points: [[35.7121, 139.7945], [35.7165, 139.8015]],
+                transport: "🚶 徒步",
+                time: "約 10 分鐘",
+                price: "免費",
+                note: "Day2｜沿隅田川走"
+            },
+            {
+                from: "隅田公園",
+                to: "東京晴空塔",
+                points: [[35.7165, 139.8015], [35.7101, 139.8107]],
+                transport: "🚶 徒步",
+                time: "約 15 分鐘",
+                price: "免費",
+                note: "Day2｜過橋即到"
+            },
+
+            // Day 3: APA → 築地市場 → GINZA SIX → 回APA放東西 → 東京車站 → 麻布台之丘 → 回APA
+            {
+                from: "APA上野",
+                to: "築地場外市場",
+                points: [[35.7138, 139.7774], [35.6654, 139.7707]],
+                transport: "🚇 日比谷線",
+                time: "約 15 分鐘",
+                price: "¥210",
+                note: "Day3｜上野→築地（直達）"
+            },
+            {
+                from: "築地市場",
+                to: "GINZA SIX",
+                points: [[35.6654, 139.7707], [35.6696, 139.7636]],
+                transport: "🚶 徒步",
+                time: "約 15 分鐘",
+                price: "免費",
+                note: "Day3｜經過歌舞伎座"
+            },
+            {
+                from: "GINZA SIX",
+                to: "APA上野（放東西）",
+                points: [[35.6696, 139.7636], [35.7138, 139.7774]],
+                transport: "🚇 銀座線",
+                time: "約 15 分鐘",
+                price: "¥210",
+                note: "Day3｜銀座→上野｜放購物袋"
+            },
+            {
+                from: "APA上野",
+                to: "東京車站",
+                points: [[35.7138, 139.7774], [35.6812, 139.7671]],
+                transport: "🚃 JR山手線",
+                time: "約 7 分鐘",
+                price: "¥170",
+                note: "Day3｜上野→東京（直達）"
+            },
+            {
+                from: "東京車站",
+                to: "麻布台之丘",
+                points: [[35.6812, 139.7671], [35.6602, 139.7394]],
+                transport: "🚇 日比谷線",
+                time: "約 15 分鐘",
+                price: "¥210",
+                note: "Day3｜東京→神谷町→直結"
+            },
+            {
+                from: "麻布台之丘",
+                to: "APA上野",
+                points: [[35.6602, 139.7394], [35.7138, 139.7774]],
+                transport: "🚇 日比谷線",
+                time: "約 20 分鐘",
+                price: "¥210",
+                note: "Day3｜神谷町→上野（直達）"
+            },
+
+            // Day 4: APA早餐 → teamLab → 下午待定
+            {
+                from: "APA上野",
+                to: "teamLab Planets",
+                points: [[35.7138, 139.7774], [35.6433, 139.7875]],
+                transport: "🚇 日比谷線+百合海鷗",
+                time: "約 35 分鐘",
+                price: "¥420",
+                note: "Day4｜上野→築地→新豐洲"
+            },
+
+            // Day 5: APA → 上野站 → 長野原草津口 → 草津巴士站 → 望雲 → 湯畑 → 熱乃湯
+            {
+                from: "APA上野",
+                to: "上野站",
+                points: [[35.7138, 139.7774], [35.7141, 139.7774]],
+                transport: "🚶 徒步",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day5｜09:30退房"
+            },
+            {
+                from: "上野站",
+                to: "長野原草津口",
+                points: [[35.7141, 139.7774], [36.5547, 138.6419]],
+                transport: "🚃 JR特急草津1號",
+                time: "10:00發→12:18著",
+                price: "JR周遊券含",
+                note: "Day5｜直達特急，車程2小時18分"
+            },
+            {
+                from: "長野原草津口",
+                to: "草津巴士站",
+                points: [[36.5547, 138.6419], [36.6213, 138.5963]],
+                transport: "🚌 JR關東巴士",
+                time: "12:26發→12:51著",
+                price: "¥780",
+                note: "Day5｜錯過要等2小時（下班14:42）"
+            },
+            {
+                from: "草津巴士站",
+                to: "草津望雲",
+                points: [[36.6213, 138.5963], [36.6230, 138.5948]],
+                transport: "🚐 旅館接送",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day5｜打電話給望雲來接"
+            },
+            {
+                from: "草津望雲",
+                to: "湯畑",
+                points: [[36.6230, 138.5948], [36.6219, 138.5960]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day5｜溫泉街中心"
+            },
+            {
+                from: "湯畑",
+                to: "熱乃湯",
+                points: [[36.6219, 138.5960], [36.6215, 138.5958]],
+                transport: "🚶 徒步",
+                time: "約 1 分鐘",
+                price: "免費",
+                note: "Day5｜湯揉表演"
+            },
+
+            // Day 6: 望雲 → 西之河原公園 → 露天風呂 → 大瀧乃湯 → 御座之湯
+            {
+                from: "草津望雲",
+                to: "西之河原公園",
+                points: [[36.6230, 138.5948], [36.6237, 138.5905]],
+                transport: "🚶 徒步",
+                time: "約 10 分鐘",
+                price: "免費",
+                note: "Day6｜經過湯畑"
+            },
+            {
+                from: "西之河原公園",
+                to: "露天風呂",
+                points: [[36.6237, 138.5905], [36.6245, 138.5895]],
+                transport: "🚶 徒步",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day6｜公園內"
+            },
+            {
+                from: "露天風呂",
+                to: "大瀧乃湯",
+                points: [[36.6245, 138.5895], [36.6195, 138.5942]],
+                transport: "🚶 徒步",
+                time: "約 10 分鐘",
+                price: "免費",
+                note: "Day6｜回湯畑方向"
+            },
+            {
+                from: "大瀧乃湯",
+                to: "御座之湯",
+                points: [[36.6195, 138.5942], [36.6217, 138.5955]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day6｜湯畑旁"
+            },
+
+            // Day 7: 望雲 → 草津巴士站 → 輕井澤Outlet → 東京站 → OMO5五反田
+            {
+                from: "草津望雲",
+                to: "草津巴士總站",
+                points: [[36.6230, 138.5948], [36.6213, 138.5963]],
+                transport: "🚐 旅館接送",
+                time: "10:00退房",
+                price: "免費",
+                note: "Day7｜請旅館送去巴士站"
+            },
+            {
+                from: "草津巴士站",
+                to: "輕井澤站",
+                points: [[36.6213, 138.5963], [36.3447, 138.6358]],
+                transport: "🚌 草輕巴士",
+                time: "10:30發→11:55著",
+                price: "¥2,240",
+                note: "Day7｜車程約85分鐘"
+            },
+            {
+                from: "輕井澤站",
+                to: "輕井澤Outlet",
+                points: [[36.3447, 138.6358], [36.3411, 138.6350]],
+                transport: "🚶 徒步",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day7｜南口直結"
+            },
+            {
+                from: "輕井澤Outlet",
+                to: "輕井澤站",
+                points: [[36.3411, 138.6350], [36.3447, 138.6358]],
+                transport: "🚶 徒步",
+                time: "約 3 分鐘",
+                price: "免費",
+                note: "Day7｜逛約4.5小時"
+            },
+            {
+                from: "輕井澤站",
+                to: "東京站",
+                points: [[36.3447, 138.6358], [35.6812, 139.7671]],
+                transport: "🚄 北陸新幹線 あさま624",
+                time: "16:23發→17:28著",
+                price: "JR周遊券含（指定席¥6,020）",
+                note: "Day7｜前班15:56あさま622｜後班16:48はくたか568"
+            },
+            {
+                from: "東京站",
+                to: "OMO5五反田",
+                points: [[35.6812, 139.7671], [35.6261, 139.7234]],
+                transport: "🚃 JR山手線",
+                time: "17:30發→17:50著",
+                price: "¥210",
+                note: "Day7｜外回り（品川方向）約19分"
+            },
+
+            // Day 8: OMO5 → 東京巨蛋 → Shibuya Sky → 澀谷
+            {
+                from: "OMO5五反田",
+                to: "東京巨蛋",
+                points: [[35.6261, 139.7234], [35.7056, 139.7519]],
+                transport: "🚃 山手線+中央線",
+                time: "約 25 分鐘",
+                price: "¥210",
+                note: "Day8｜五反田→新宿→水道橋"
+            },
+            {
+                from: "東京巨蛋",
+                to: "Shibuya Sky",
+                points: [[35.7056, 139.7519], [35.6584, 139.7022]],
+                transport: "🚃 中央線+山手線",
+                time: "約 20 分鐘",
+                price: "¥210",
+                note: "Day8｜水道橋→新宿→澀谷"
+            },
+            {
+                from: "Shibuya Sky",
+                to: "澀谷",
+                points: [[35.6584, 139.7022], [35.6580, 139.7016]],
+                transport: "🚶 館內",
+                time: "約 2 分鐘",
+                price: "免費",
+                note: "Day8｜Scramble Square直結"
+            },
+
+            // Day 9: OMO5 → Artizon → 東京車站周邊 → 東京巨蛋
+            {
+                from: "OMO5五反田",
+                to: "Artizon Museum",
+                points: [[35.6261, 139.7234], [35.6776, 139.7707]],
+                transport: "🚃 山手線+京浜東北線",
+                time: "約 20 分鐘",
+                price: "¥180",
+                note: "Day9｜五反田→東京→徒步5分"
+            },
+            {
+                from: "Artizon",
+                to: "東京車站周邊",
+                points: [[35.6776, 139.7707], [35.6812, 139.7671]],
+                transport: "🚶 徒步",
+                time: "約 5 分鐘",
+                price: "免費",
+                note: "Day9｜午餐"
+            },
+            {
+                from: "東京車站",
+                to: "東京巨蛋",
+                points: [[35.6812, 139.7671], [35.7056, 139.7519]],
+                transport: "🚃 JR中央線",
+                time: "約 10 分鐘",
+                price: "¥170",
+                note: "Day9｜WBC台日大戰🔥"
+            },
+
+            // Day 10: OMO5 → 品川 → 成田
+            {
+                from: "OMO5五反田",
+                to: "品川站",
+                points: [[35.6261, 139.7234], [35.6284, 139.7387]],
+                transport: "🚃 JR山手線",
+                time: "約 5 分鐘",
+                price: "¥160",
+                note: "Day10｜退房後"
+            },
+            {
+                from: "品川站",
+                to: "成田機場",
+                points: [[35.6284, 139.7387], [35.7720, 140.3929]],
+                transport: "🚄 N'EX成田特快",
+                time: "約 70 分鐘",
+                price: "¥3,250",
+                note: "Day10｜直達成田"
+            }
         ];
 
-        L.polyline(routePoints, {
-            color: '#4ecdc4',
-            weight: 2,
-            opacity: 0.4,
-            dashArray: '8, 8'
-        }).addTo(map);
+        routeSegments.forEach(segment => {
+            const polyline = L.polyline(segment.points, {
+                color: '#4ecdc4',
+                weight: 3,
+                opacity: 0.6,
+                dashArray: '8, 8'
+            }).addTo(map);
+
+            polyline.on('click', function(e) {
+                L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(`
+                        <div style="min-width: 180px;">
+                            <div style="font-weight: 700; margin-bottom: 8px; color: #4ecdc4;">
+                                ${segment.from} → ${segment.to}
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <span style="color: #888;">交通：</span>
+                                <span>${segment.transport}</span>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <span style="color: #888;">時間：</span>
+                                <span>${segment.time}</span>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <span style="color: #888;">費用：</span>
+                                <span style="color: #ffe66d;">${segment.price}</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #aaa; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #3a3a6a;">
+                                📝 ${segment.note}
+                            </div>
+                        </div>
+                    `)
+                    .openOn(map);
+            });
+
+            // Hover effect
+            polyline.on('mouseover', function() {
+                this.setStyle({ weight: 5, opacity: 1 });
+            });
+            polyline.on('mouseout', function() {
+                this.setStyle({ weight: 3, opacity: 0.6 });
+            });
+        });
 
         // Expand Day 1 by default
         document.querySelector('.day-section').classList.add('expanded');
@@ -1353,6 +1933,78 @@
         // Fit bounds
         const allLatLngs = Object.values(markers).map(m => m.getLatLng());
         map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+    </script>
+    </div><!-- 關閉 main-content -->
+    
+    <script>
+        // ========== 密碼保護功能 ==========
+        // 設定你的密碼（可以改成任何你想要的密碼）
+        const CORRECT_PASSWORD = "01181214";
+        
+        // 檢查是否已經登入過（24小時內有效）
+        function checkSavedLogin() {
+            const savedTime = localStorage.getItem('japan_trip_login_time');
+            if (savedTime) {
+                const now = new Date().getTime();
+                const diff = now - parseInt(savedTime);
+                // 24小時內有效
+                if (diff < 24 * 60 * 60 * 1000) {
+                    showMainContent();
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // 顯示主內容
+        function showMainContent() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            // 重新計算地圖大小（修復縮放問題）
+            setTimeout(function() {
+                if (typeof map !== 'undefined') {
+                    map.invalidateSize();
+                    // 重新設定視圖
+                    if (typeof markers !== 'undefined' && Object.keys(markers).length > 0) {
+                        const allLatLngs = Object.values(markers).map(m => m.getLatLng());
+                        map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+                    }
+                }
+            }, 200);
+        }
+        
+        // 檢查密碼
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            const errorDiv = document.getElementById('login-error');
+            
+            if (input === CORRECT_PASSWORD) {
+                // 儲存登入時間
+                localStorage.setItem('japan_trip_login_time', new Date().getTime().toString());
+                showMainContent();
+            } else {
+                errorDiv.style.display = 'block';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+                
+                // 3秒後隱藏錯誤訊息
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        // Enter 鍵提交
+        document.getElementById('password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+        
+        // 頁面載入時檢查
+        if (!checkSavedLogin()) {
+            document.getElementById('password-input').focus();
+        }
     </script>
 </body>
 </html>
